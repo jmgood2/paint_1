@@ -20,8 +20,29 @@ public class ImageHandler {
 
 
     public void addImage(String s) throws FileNotFoundException {
-        Image i = new Image(new FileInputStream(s));
-        iMap.put(s,i);
+        if (iMap.containsKey(s)) {
+            return;
+        }
+        try {
+            Image i = new Image(new FileInputStream(s));
+            iMap.put(s, i);
+        } catch (FileNotFoundException e){
+            e.printStackTrace();
+
+        }
+    }
+
+    public void addImage(File f) throws FileNotFoundException {
+        if (iMap.containsKey(f.getAbsolutePath())){
+            return;
+        }
+        try {
+            Image i = new Image(new FileInputStream(f.getAbsolutePath()));
+            iMap.put(f.getAbsolutePath(), i);
+        } catch (FileNotFoundException e){
+            e.printStackTrace();
+
+        }
     }
 
     public Image getImage(File f){
@@ -34,7 +55,5 @@ public class ImageHandler {
 
 
     }
-
-
 
 }
