@@ -28,7 +28,6 @@ public class ImageHandler {
             iMap.put(s, i);
         } catch (FileNotFoundException e){
             e.printStackTrace();
-
         }
     }
 
@@ -41,7 +40,6 @@ public class ImageHandler {
             iMap.put(f.getAbsolutePath(), i);
         } catch (FileNotFoundException e){
             e.printStackTrace();
-
         }
     }
 
