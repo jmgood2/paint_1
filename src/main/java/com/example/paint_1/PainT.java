@@ -20,6 +20,8 @@ import javafx.stage.Stage;
 
 import java.awt.*;
 import java.io.*;
+import java.nio.file.FileSystemException;
+import java.util.*;
 
 
 public class PainT extends Application {
@@ -28,16 +30,23 @@ public class PainT extends Application {
         stage.setTitle("Paint (t)");
 
         /**************************
-         * MENU Bar
+         * MENU Bars
          ****************** ***/
 
+        /**** Main Menu *******/
         // File menu
         Menu mFile = new Menu("File");
         MenuItem openI = new MenuItem("Open Image");
         openI.setAccelerator(KeyCombination.keyCombination("Shortcut+Shift+N"));
+        MenuItem saveI = new MenuItem("Save Image");
+        saveI.setAccelerator(KeyCombination.keyCombination("Shortcut+S"));
+        MenuItem saveIAs= new MenuItem("Save Image As");
+        saveIAs.setAccelerator(KeyCombination.keyCombination("Shortcut+Shift+S"));
         MenuItem closeI = new MenuItem("Close Image");
         MenuItem exit = new MenuItem("Close");
         mFile.getItems().add(openI);
+        mFile.getItems().add(saveI);
+        mFile.getItems().add(saveIAs);
         mFile.getItems().add(closeI);
         mFile.getItems().add(exit);
 
@@ -57,6 +66,10 @@ public class PainT extends Application {
         // Menu bar
         MenuBar mBar = new MenuBar(mFile, mEdit, mHelp);
 
+        /********* Secondary Menu ***/
+        
+
+
         /**************************
          * IMAGE View
          ****************** ***/
@@ -67,6 +80,9 @@ public class PainT extends Application {
         iView.setY(5);
         iView.setFitWidth(600);
         iView.setPreserveRatio(true);
+
+        ImageHandler iHandler = new ImageHandler();
+
 
         /**************************
          *  LAYOUT Setup
@@ -97,17 +113,33 @@ public class PainT extends Application {
                     File file = openImage(stage);
                     if (file != null){
                         try {
-                            iView.setImage(new Image(
-                                    new FileInputStream(
-                                            file.getAbsolutePath())));
+                            iHandler.addImage(file.getAbsolutePath());
+                            iView.setImage(iHandler.getImage(file));
                             iView.setVisible(true);
-                        } catch (FileNotFoundException ex) {
+                        } catch (NullPointerException ex) {
                             ex.printStackTrace();
                             iView.setVisible(false);
                         }
                     }
+                    else System.out.println("File is NULL! -- PainT.java - ln 113");
                 }
         );
+
+        // SAVE image
+  /*      saveI.setOnAction(
+                aE -> {
+                    File file = saveImage(stage);
+                    if (file = null){
+                        try {
+                            file = saveImageAs(stage);
+                        } catch (FileSystemException ex){
+                            ex.printStackTrace();
+                        }
+
+                    }
+
+                }
+        );*/
 
         // CLOSE image
         closeI.setOnAction(
@@ -147,6 +179,12 @@ public class PainT extends Application {
                 }
         );
 
+        /**************************
+         * IMAGE
+         ****************** ***/
+
+        // Image MAP
+        Map iMap = new HashMap();
 
 
 
