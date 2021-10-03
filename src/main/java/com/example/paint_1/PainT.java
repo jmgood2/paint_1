@@ -116,7 +116,7 @@ public class PainT extends Application {
                             iHandler.addImage(file.getAbsolutePath());
                             iView.setImage(iHandler.getImage(file));
                             iView.setVisible(true);
-                        } catch (NullPointerException ex) {
+                        } catch (NullPointerException | FileNotFoundException ex) {
                             ex.printStackTrace();
                             iView.setVisible(false);
                         }

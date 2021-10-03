@@ -12,15 +12,28 @@ public class ImageHandler {
 
     }
     public ImageHandler(File f) throws FileNotFoundException {
-        Image i = new Image(new FileInputStream(f.getAbsolutePath()));
-        iMap.put(f.getAbsolutePath(),i);
+        addImage(f.getAbsolutePath());
     }
     public ImageHandler(String f) throws FileNotFoundException {
-        Image i = new Image(new FileInputStream(f));
-        iMap.put(f,i);
+        addImage(f);
     }
 
 
+    public void addImage(String s) throws FileNotFoundException {
+        Image i = new Image(new FileInputStream(s));
+        iMap.put(s,i);
+    }
+
+    public Image getImage(File f){
+        try {
+            return iMap.get(f.getAbsolutePath());
+        } catch (NullPointerException e){
+            e.printStackTrace();
+        }
+        return null;
+
+
+    }
 
 
 
