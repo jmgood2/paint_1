@@ -22,10 +22,12 @@ import javafx.stage.Stage;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import org.imgscalr.Scalr;
 
 
 public class PainT extends Application {
@@ -92,6 +94,8 @@ public class PainT extends Application {
 
         Canvas canvas = new Canvas(baseScene.getWidth(),
                 baseScene.getHeight());
+        canvas.setWidth(500);
+        canvas.setHeight(500);
 
         GraphicsContext gContent = canvas.getGraphicsContext2D();
 
@@ -189,9 +193,8 @@ public class PainT extends Application {
                             BufferedImage bI = ImageIO.read(fIStream);
                             fIStream.close();
 
-                            BufferedImage newImage = new BufferedImage(bI.getWidth(),
-                                    bI.getHeight(),
-                                    BufferedImage.TYPE_INT_RGB);
+                            //BufferedImage newImage = new BufferedImage(bI.getWidth(), bI.getHeight(), BufferedImage.TYPE_INT_RGB);
+                            BufferedImage newImage = fitCanvas(canvas, bI);
                             newImage.createGraphics().drawImage(bI,
                                     0,
                                     0,
@@ -326,6 +329,35 @@ public class PainT extends Application {
         aPop.setScene(aScene);
         aPop.showAndWait();
     }
+
+    /**************
+     * Image Resize Method
+     * Resizes image to fil canvas
+     */
+    public static BufferedImage fitCanvas(Canvas c, BufferedImage i){
+        int ratio = 0;
+        if (i.getWidth() > c.getWidth()) {
+            ratio = (int) (c.getWidth() / i.getWidth());
+        }
+        else if (i.getHeight() > c.getHeight()) {
+            ratio = (int) (c.getHeight() / i.getHeight());
+        }
+        else ratio = 1;
+        int newWidth = (i.getWidth() * ratio);
+        int newHeight = (i.getHeight() * ratio);
+
+        return Scalr.resize(i,
+                Scalr.Method.BALANCED,
+                newWidth,
+                newHeight);
+
+        //AffineTransform aT = new AffineTransform();
+        //aT.scale(ratio, ratio);
+
+
+
+    }
+
 
 
     /** main method

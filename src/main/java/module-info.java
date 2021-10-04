@@ -7,6 +7,7 @@ module com.example.paint_1 {
     requires org.kordamp.ikonli.javafx;
     requires javafx.graphics;
     requires java.desktop;
+    requires imgscalr.lib;
 
     opens com.example.paint_1 to javafx.fxml;
     exports com.example.paint_1;
