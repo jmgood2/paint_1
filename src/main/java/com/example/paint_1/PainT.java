@@ -1,9 +1,11 @@
 package com.example.paint_1;
 
 import javafx.application.Application;
-
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -11,23 +13,32 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCombination;
-
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+
 import java.awt.*;
-import java.io.*;
-import java.nio.file.FileSystemException;
-import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class PainT extends Application {
+    @SuppressWarnings("ConstantConditions")
     @Override
     public void start(Stage stage) throws IOException {
         stage.setTitle("Paint (t)");
+
+        /**************************
+         * IMAGEHANDLER
+         ****************** ***/
+
+        ImageHandler iHandler = new ImageHandler();
 
         /**************************
          * MENU Bars
@@ -67,7 +78,39 @@ public class PainT extends Application {
         MenuBar mBar = new MenuBar(mFile, mEdit, mHelp);
 
         /********* Secondary Menu ***/
-        
+
+        /**************************
+         *  SCENE Setup
+         ****************** ***/
+        BorderPane bRoot = new BorderPane();
+        Scene baseScene = new Scene(bRoot, 1000, 800);
+
+
+        /**************************
+         *  Canvas Setup
+         ****************** ***/
+
+        Canvas canvas = new Canvas(baseScene.getWidth(),
+                baseScene.getHeight());
+
+        GraphicsContext gContent = canvas.getGraphicsContext2D();
+
+
+        Group group = new Group(canvas);
+        group.setVisible(false);
+
+
+
+
+        /**************************
+         *  LAYOUT Setup
+         ****************** ***/
+
+        HBox hB1 = new HBox(mBar);
+        bRoot.setTop(hB1);
+        bRoot.setCenter(group);
+
+
 
 
         /**************************
@@ -81,17 +124,8 @@ public class PainT extends Application {
         iView.setFitWidth(600);
         iView.setPreserveRatio(true);
 
-        ImageHandler iHandler = new ImageHandler();
 
 
-        /**************************
-         *  LAYOUT Setup
-         ****************** ***/
-
-        BorderPane bRoot = new BorderPane();
-        HBox hB1 = new HBox(mBar);
-        bRoot.setTop(hB1);
-        bRoot.setCenter(iView);
 
 
 
@@ -99,9 +133,11 @@ public class PainT extends Application {
          * SCENE creation and update
          ****************** ***/
 
-        stage.setScene(new Scene(bRoot, 800, 600));
+        stage.setScene(baseScene);
 
         stage.show();
+
+
 
         /**************************
          * Menu Item Actions
@@ -112,13 +148,24 @@ public class PainT extends Application {
                 aE -> {
                     File file = openImage(stage);
                     if (file != null){
+                        if (iHandler.getImage() != null) {
+                            gContent.clearRect(0,
+                                    0,
+                                    iHandler.getImage().getWidth(),
+                                    iHandler.getImage().getHeight());
+                        }
                         try {
-                            iHandler.addImage(file.getAbsolutePath());
-                            iView.setImage(iHandler.getImage(file));
-                            iView.setVisible(true);
+                            iHandler.addImage(file);
+                            Image i = iHandler.getImage();
+                            gContent.drawImage(i,
+                                    0,
+                                    0);
+                            group.setVisible(true);
+
                         } catch (NullPointerException | FileNotFoundException ex) {
                             ex.printStackTrace();
-                            iView.setVisible(false);
+                            iHandler.closeImage();
+                            group.setVisible(false);
                         }
                     }
                     else System.out.println("File is NULL! -- PainT.java - ln 113");
@@ -126,25 +173,43 @@ public class PainT extends Application {
         );
 
         // SAVE image
-  /*      saveI.setOnAction(
+        saveI.setOnAction(
                 aE -> {
                     File file = saveImage(stage);
-                    if (file = null){
+                    String fType = file.getName().substring(
+                            file.getName().lastIndexOf('.') + 1);
+                    System.out.println("File extension of " + file.getName() + " is " + fType);
+                    if (file == null){
+                        //saveImageAs(stage);
+                        saveImage(stage);
+                    }
+                    else {
                         try {
-                            file = saveImageAs(stage);
-                        } catch (FileSystemException ex){
-                            ex.printStackTrace();
-                        }
 
+
+
+
+
+
+
+
+                        } catch (ArrayIndexOutOfBoundsException  e) {
+                            e.printStackTrace();
+                        }
                     }
 
                 }
-        );*/
+        );
 
         // CLOSE image
         closeI.setOnAction(
                 aE -> {
-                    iView.setVisible(false);
+                    gContent.clearRect(0,
+                            0,
+                            iHandler.getImage().getWidth(),
+                            iHandler.getImage().getHeight());
+                    iHandler.closeImage();
+                    group.setVisible(false);
                 }
         );
 
@@ -214,6 +279,23 @@ public class PainT extends Application {
         return fChooser.showOpenDialog(stage);
 
     }
+
+    public static File saveImage(Stage stage){
+        FileChooser fChooser = new FileChooser();
+        fChooser.setTitle("Save Image");
+        fChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("All Images", "*.*"),
+                new FileChooser.ExtensionFilter("JPG", "*.jpg", "*.jpeg"),
+                new FileChooser.ExtensionFilter("PNG", "*.png"),
+                new FileChooser.ExtensionFilter("BMP", "*.bmp"),
+                new FileChooser.ExtensionFilter("TIFF", "*.tif", "*.tiff")
+        );
+        return fChooser.showSaveDialog(stage);
+
+    }
+
+
+
 
     /** aboutPop method
      * Opens a new Scene with About information

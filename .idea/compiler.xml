@@ -9,8 +9,6 @@
         <module name="paint_1" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="paint_1" target="16" />
-    </bytecodeTargetLevel>
+    <bytecodeTargetLevel target="1.6" />
   </component>
 </project>
