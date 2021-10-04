@@ -20,10 +20,10 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 
+import javax.imageio.ImageIO;
 import java.awt.*;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -178,22 +178,34 @@ public class PainT extends Application {
                     File file = saveImage(stage);
                     String fType = file.getName().substring(
                             file.getName().lastIndexOf('.') + 1);
-                    System.out.println("File extension of " + file.getName() + " is " + fType);
+                    System.out.println("File extension of " + file.getAbsolutePath() + " is " + fType);
                     if (file == null){
                         //saveImageAs(stage);
                         saveImage(stage);
                     }
                     else {
                         try {
+                            FileInputStream fIStream = new FileInputStream(iHandler.getOpenImage().getAbsolutePath());
+                            BufferedImage bI = ImageIO.read(fIStream);
+                            fIStream.close();
+
+                            BufferedImage newImage = new BufferedImage(bI.getWidth(),
+                                    bI.getHeight(),
+                                    BufferedImage.TYPE_INT_RGB);
+                            newImage.createGraphics().drawImage(bI,
+                                    0,
+                                    0,
+                                    Color.WHITE,
+                                    null);
+
+                            FileOutputStream fOStream = new FileOutputStream(file.getAbsolutePath());
+                            ImageIO.write(newImage,
+                                    fType,
+                                    fOStream);
+                            fOStream.close();
 
 
-
-
-
-
-
-
-                        } catch (ArrayIndexOutOfBoundsException  e) {
+                        } catch (ArrayIndexOutOfBoundsException | IOException e) {
                             e.printStackTrace();
                         }
                     }
@@ -256,7 +268,7 @@ public class PainT extends Application {
 
     }
 
-    /**************************
+    /**************************☺☺
      * METHODS
      ****************** ***/
 
