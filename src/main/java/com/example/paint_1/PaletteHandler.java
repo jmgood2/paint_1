@@ -1,7 +1,7 @@
 package com.example.paint_1;
 
-import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 
 import java.util.HashMap;
@@ -13,9 +13,20 @@ public class PaletteHandler {
     Rectangle[] p = new Rectangle[8];
     Rectangle currentColor = new Rectangle (50,50);
 
+    Line[] l = new Line[3];
+    Line menuL;
+    public double thin, def, thick;
+    private int currentL;
+
     public PaletteHandler(){
-        for (int i = 0; i < 8; i++){
+        thin = 1.0;
+        def = 5.0;
+        thick = 10.0;
+
+
+        for (int i = 0; i < p.length; i++){
             p[i] = new Rectangle(20,20);
+            currentL = 1;
             switch (i){
                 case 0:
                     p[i].setFill(Color.WHITE);
@@ -59,9 +70,59 @@ public class PaletteHandler {
             currentColor.setStrokeWidth(2);
             currentColor.setStroke(Color.BLACK);
 
+            if ( i < l.length ){
+                l[i] = new Line(0,10,20,10);
+                switch (i){
+                    case 0:
+                        l[i].setStrokeWidth(thin);
+                        break;
+                    case 1:
+                        l[i].setStrokeWidth(def);
+                        break;
+                    case 2:
+                        l[i].setStrokeWidth(thick);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+
         }
+        menuL = this.getCurrentLine();
+        menuL.setStartX(0);
+        menuL.setStartY(10);
+        menuL.setEndX(20);
+        menuL.setEndY(10);
+
     }
 
+    public Line getMenuLine(){
+        return menuL;
+    }
+
+    public Line getCurrentLine(){
+        switch (currentL){
+            case 1:
+                return l[0];
+            case 2:
+                return l[1];
+            case 3:
+                return l[2];
+            default:
+                break;
+        }
+        return l[0];
+    }
+
+    public Line getLine(int i){
+        if (i>2) {
+            currentL = 2;
+            return l[2];
+        }
+        currentL = i;
+        return l[i];
+    }
 
     public Color getCurrentColor(){
         return (Color) currentColor.getFill();
@@ -79,8 +140,18 @@ public class PaletteHandler {
         return cMap.get(p[i]);
     }
 
+    public void setMenuLine(){
+        menuL = getCurrentLine();
+    }
+
     public void setCurrentColor(Color c){
         currentColor.setFill(c);
+    }
+
+    public void setCurrentLine(int i){
+        if (i != thin && i != def && i!= thick) currentL = 1;
+        else currentL = i;
+        this.setMenuLine();
     }
 
 

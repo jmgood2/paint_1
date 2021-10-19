@@ -1,6 +1,8 @@
 package com.example.paint_1;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Insets;
@@ -19,10 +21,9 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 import javafx.stage.Screen;
@@ -37,6 +38,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -108,9 +110,6 @@ public class PainT extends Application {
         ToggleButton drawLine = new ToggleButton("LINE");
         drawLine.setToggleGroup(buttons);
         ButtonBar.setButtonData(drawLine, ButtonBar.ButtonData.LEFT);
-        //ToggleButton drawCircle = new ToggleButton("CIRCLE");
-        //drawCircle.setToggleGroup(buttons);
-        //ButtonBar.setButtonData(drawCircle, ButtonBar.ButtonData.LEFT);
 
         bBar.getButtons().addAll(drawFree, drawLine);
 
@@ -123,6 +122,31 @@ public class PainT extends Application {
             vB1.getChildren().add(pHandler.getRect(i));
         }
         vB1.getChildren().add(pHandler.getCurrentColorRect());
+
+
+        /********* Line Width Selection ***/
+        Menu pMenu = new Menu("",
+                pHandler.getMenuLine());
+        MenuItem thinW = new MenuItem("Thin",
+                pHandler.getLine(0));
+        MenuItem defW = new MenuItem("Default",
+                pHandler.getLine(1));
+        MenuItem thickW = new MenuItem("Thick",
+                pHandler.getLine(2));
+        pMenu.getItems().add(thinW);
+        pMenu.getItems().add(defW);
+        pMenu.getItems().add(thickW);
+
+        MenuBar pBar = new MenuBar(pMenu);
+        vB1.getChildren().add(pBar);
+
+        TextField textW = new TextField(Double.toString(dHandler.getLineWidth()));
+        textW.setMinWidth(20);
+        textW.setMaxWidth(40);
+        vB1.getChildren().add(textW);
+
+
+
 
 
 
@@ -139,11 +163,18 @@ public class PainT extends Application {
         /**************************
          *  Canvas Setup
          ****************** ***/
+        Pane cPane = new Pane();
+        bRoot.setCenter(cPane);
 
-        Canvas canvas = new Canvas(baseScene.getWidth(),
-                baseScene.getHeight());
-        canvas.setWidth(500);
-        canvas.setHeight(500);
+        Canvas canvas = new Canvas();
+        cPane.getChildren().add(canvas);
+        cPane.setBorder(new Border(new BorderStroke(Color.BLACK,
+                BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY,
+                BorderWidths.DEFAULT)));
+
+        canvas.widthProperty().bind(cPane.widthProperty());
+        canvas.heightProperty().bind(cPane.heightProperty());
 
         GraphicsContext gContent = canvas.getGraphicsContext2D();
         gContent.setFill(Color.WHITE);
@@ -153,8 +184,8 @@ public class PainT extends Application {
                 canvas.getHeight());
 
 
-        Group group1 = new Group(canvas);
-        group1.setVisible(true);
+        //Group group1 = new Group(canvas);
+        //cPane.setVisible(true);
 
 
 
@@ -164,10 +195,11 @@ public class PainT extends Application {
 
         HBox hB1 = new HBox(mBar);
         HBox hB2 = new HBox(bBar);
+        VBox vB2 = new VBox();
         bRoot.setTop(hB1);
-        bRoot.setCenter(group1);
         bRoot.setBottom(hB2);
         bRoot.setLeft(vB1);
+        bRoot.setRight(vB2);
 
 
 
@@ -221,7 +253,7 @@ public class PainT extends Application {
                             BufferedImage bI = ImageIO.read(fIStream);
                             fIStream.close();
 
-                            BufferedImage newImage = fitCanvas(canvas, bI);
+                            //BufferedImage newImage = fitCanvas(canvas, bI);
 
                             //Image iii = SwingFXUtils.toFXImage();
 
@@ -229,12 +261,12 @@ public class PainT extends Application {
                             gContent.drawImage(i,
                                     0,
                                     0);
-                            group1.setVisible(true);
+                            cPane.setVisible(true);
 
                         } catch (NullPointerException | IOException ex) {
                             ex.printStackTrace();
                             iHandler.closeImage();
-                            group1.setVisible(false);
+                            cPane.setVisible(false);
                         }
                     }
                     else System.out.println("File is NULL! -- PainT.java - ln 113");
@@ -269,7 +301,7 @@ public class PainT extends Application {
                             iHandler.getImage().getWidth(),
                             iHandler.getImage().getHeight());
                     iHandler.closeImage();
-                    group1.setVisible(false);
+                    cPane.setVisible(false);
                 }
         );
 
@@ -322,21 +354,112 @@ public class PainT extends Application {
         );
 
         /**************************
-         * Color Selection
+         * Palette Commands
          ****************** ***/
+
+        /**** Color Selection *******/
 
         vB1.addEventHandler(MouseEvent.MOUSE_CLICKED,
                 e -> {
 
-            Rectangle target = (Rectangle) e.getTarget();
-            dHandler.setCurrentColor((Color) target.getFill());
-            pHandler.setCurrentColor(dHandler.getCurrentColor());
+            try {
 
-
-
+                Rectangle target = (Rectangle) e.getTarget();
+                dHandler.setCurrentColor((Color) target.getFill());
+                pHandler.setCurrentColor(dHandler.getCurrentColor());
+            } catch (ClassCastException cE){
+                cE.printStackTrace();
+            }
 
                 });
 
+
+        /**** Line Thickness Selection *******/
+
+        pMenu.setOnAction(
+                aE ->{
+                    pMenu.setGraphic(pHandler.getMenuLine());
+                }
+        );
+
+        thinW.setOnAction(
+                aE -> {
+                    dHandler.setLineWidth(pHandler.thin);
+                    pHandler.setCurrentLine(1);
+                    textW.setText(Double.toString(dHandler.lineWidth));
+                    Line mLine = new Line(0,
+                            10,
+                            20,
+                            10);
+                    mLine.setStroke(pHandler.getCurrentColor());
+                    mLine.setStrokeWidth(1);
+                    pMenu.setGraphic(mLine);
+                }
+        );
+        defW.setOnAction(
+                aE -> {
+                    dHandler.setLineWidth(pHandler.def);
+                    pHandler.setCurrentLine(5);
+                    textW.setText(Double.toString(dHandler.lineWidth));
+                    Line mLine = new Line(0,
+                            10,
+                            20,
+                            10);
+                    mLine.setStroke(pHandler.getCurrentColor());
+                    mLine.setStrokeWidth(5);
+                    pMenu.setGraphic(mLine);
+                }
+        );
+        thickW.setOnAction(
+                aE -> {
+                    dHandler.setLineWidth(pHandler.thick);
+                    pHandler.setCurrentLine(10);
+                    textW.setText(Double.toString(dHandler.lineWidth));
+                    Line mLine = new Line(0,
+                            10,
+                            20,
+                            10);
+                    mLine.setStroke(pHandler.getCurrentColor());
+                    mLine.setStrokeWidth(10);
+                    pMenu.setGraphic(mLine);
+                }
+        );
+
+
+        textW.setOnAction(
+                aE -> {
+                    char[] c = textW.getText().toCharArray();
+                    System.out.println(String.valueOf(c));
+                    boolean hasDecimal = false;
+                    for (int i = 0; i < c.length; i++){
+                        if (!Character.isDigit(c[i])){
+                            boolean killChar = false;
+                            for (int j = i; j + 1 < c.length; j++){
+                                if (c[i] == '.' && !hasDecimal){
+                                    hasDecimal = true;
+                                    i++;
+                                }
+                                else  {
+                                    c[j] = c[j+1];
+                                    killChar = true;
+                                }
+
+                            }
+                            if (killChar) {
+                                c = Arrays.copyOfRange(c, 0, c.length - 1);
+                                i--;
+                            }
+                            System.out.println(String.valueOf(c));
+
+                        }
+
+
+                    }
+                    textW.setText(String.valueOf(c));
+                    dHandler.setLineWidth(Double.parseDouble(textW.getText()));
+
+                }
+        );
 
 
 
@@ -376,7 +499,7 @@ public class PainT extends Application {
                                     System.out.println(dHandler.isFirstClick());
                                     dHandler.click();
                                 } else {
-                                    gContent.setLineWidth(5);
+                                    gContent.setLineWidth(dHandler.getLineWidth());
                                     gContent.setStroke(dHandler.getCurrentColor());
                                     gContent.strokeLine(dHandler.getPosAX(),
                                             dHandler.getPosAY(),
@@ -488,28 +611,7 @@ public class PainT extends Application {
      * Image Resize Method
      * Resizes image to fil canvas
      */
-    public static BufferedImage fitCanvas(Canvas c, BufferedImage i){
-        int ratio = 0;
-        if (i.getWidth() > c.getWidth()) {
-            ratio = (int) (c.getWidth() / i.getWidth());
-        }
-        else if (i.getHeight() > c.getHeight()) {
-            ratio = (int) (c.getHeight() / i.getHeight());
-        }
-        else ratio = 1;
-        int newWidth = (i.getWidth() * ratio);
-        int newHeight = (i.getHeight() * ratio);
 
-        return null;
-
-        //return Scalr.resize(i, Scalr.Method.BALANCED, newWidth, newHeight);
-
-        //AffineTransform aT = new AffineTransform();
-        //aT.scale(ratio, ratio);
-
-
-
-    }
 
 
 
