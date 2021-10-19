@@ -58,6 +58,12 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.thesett</groupId>
+            <artifactId>swing_utils</artifactId>
+            <version>0.9.117</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -67,8 +73,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>16</source>
-                    <target>16</target>
+                    <source>8</source>
+                    <target>8</target>
                 </configuration>
             </plugin>
             <plugin>

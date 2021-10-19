@@ -1,11 +1,16 @@
 package com.example.paint_1;
 
 import javafx.application.Application;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
+import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.*;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -13,21 +18,27 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
-
+//import org.imgscalr.Scalr;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.geom.AffineTransform;
+//import java.awt.*;
+//import java.awt.*;
+import java.awt.Desktop;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.imgscalr.Scalr;
 
 
 public class PainT extends Application {
@@ -35,12 +46,18 @@ public class PainT extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         stage.setTitle("Paint (t)");
+        stage.setMaximized(true);
+
+
+
 
         /**************************
-         * IMAGEHANDLER
+         * HANDLERS
          ****************** ***/
 
         ImageHandler iHandler = new ImageHandler();
+        DrawHandler dHandler = new DrawHandler();
+        PaletteHandler pHandler = new PaletteHandler();
 
         /**************************
          * MENU Bars
@@ -79,13 +96,44 @@ public class PainT extends Application {
         // Menu bar
         MenuBar mBar = new MenuBar(mFile, mEdit, mHelp);
 
-        /********* Secondary Menu ***/
+        /********* Button Menu ***/
+
+        ToggleGroup buttons = new ToggleGroup();
+        ButtonBar bBar = new ButtonBar();
+        bBar.setButtonMinWidth(50);
+
+        ToggleButton drawFree = new ToggleButton("FREE");
+        drawFree.setToggleGroup(buttons);
+        ButtonBar.setButtonData(drawFree, ButtonBar.ButtonData.LEFT);
+        ToggleButton drawLine = new ToggleButton("LINE");
+        drawLine.setToggleGroup(buttons);
+        ButtonBar.setButtonData(drawLine, ButtonBar.ButtonData.LEFT);
+        //ToggleButton drawCircle = new ToggleButton("CIRCLE");
+        //drawCircle.setToggleGroup(buttons);
+        //ButtonBar.setButtonData(drawCircle, ButtonBar.ButtonData.LEFT);
+
+        bBar.getButtons().addAll(drawFree, drawLine);
+
+        /********* Color Palette ***/
+
+        VBox vB1 = new VBox(5);
+        vB1.setAlignment(Pos.CENTER);
+        vB1.setPadding(new Insets(10));
+        for (int i = 0; i < 8; i++){
+            vB1.getChildren().add(pHandler.getRect(i));
+        }
+        vB1.getChildren().add(pHandler.getCurrentColorRect());
+
+
+
 
         /**************************
          *  SCENE Setup
          ****************** ***/
         BorderPane bRoot = new BorderPane();
-        Scene baseScene = new Scene(bRoot, 1000, 800);
+        Scene baseScene = new Scene(bRoot,
+                Screen.getPrimary().getVisualBounds().getWidth(),
+                Screen.getPrimary().getVisualBounds().getHeight());
 
 
         /**************************
@@ -98,11 +146,15 @@ public class PainT extends Application {
         canvas.setHeight(500);
 
         GraphicsContext gContent = canvas.getGraphicsContext2D();
+        gContent.setFill(Color.WHITE);
+        gContent.fillRect(0,
+                0,
+                canvas.getWidth(),
+                canvas.getHeight());
 
 
-        Group group = new Group(canvas);
-        group.setVisible(false);
-
+        Group group1 = new Group(canvas);
+        group1.setVisible(true);
 
 
 
@@ -111,8 +163,11 @@ public class PainT extends Application {
          ****************** ***/
 
         HBox hB1 = new HBox(mBar);
+        HBox hB2 = new HBox(bBar);
         bRoot.setTop(hB1);
-        bRoot.setCenter(group);
+        bRoot.setCenter(group1);
+        bRoot.setBottom(hB2);
+        bRoot.setLeft(vB1);
 
 
 
@@ -150,6 +205,7 @@ public class PainT extends Application {
         // OPEN image
         openI.setOnAction(
                 aE -> {
+
                     File file = openImage(stage);
                     if (file != null){
                         if (iHandler.getImage() != null) {
@@ -161,15 +217,24 @@ public class PainT extends Application {
                         try {
                             iHandler.addImage(file);
                             Image i = iHandler.getImage();
+                            FileInputStream fIStream = new FileInputStream(iHandler.getOpenImage().getAbsolutePath());
+                            BufferedImage bI = ImageIO.read(fIStream);
+                            fIStream.close();
+
+                            BufferedImage newImage = fitCanvas(canvas, bI);
+
+                            //Image iii = SwingFXUtils.toFXImage();
+
+
                             gContent.drawImage(i,
                                     0,
                                     0);
-                            group.setVisible(true);
+                            group1.setVisible(true);
 
-                        } catch (NullPointerException | FileNotFoundException ex) {
+                        } catch (NullPointerException | IOException ex) {
                             ex.printStackTrace();
                             iHandler.closeImage();
-                            group.setVisible(false);
+                            group1.setVisible(false);
                         }
                     }
                     else System.out.println("File is NULL! -- PainT.java - ln 113");
@@ -188,29 +253,9 @@ public class PainT extends Application {
                         saveImage(stage);
                     }
                     else {
-                        try {
-                            FileInputStream fIStream = new FileInputStream(iHandler.getOpenImage().getAbsolutePath());
-                            BufferedImage bI = ImageIO.read(fIStream);
-                            fIStream.close();
-
-                            //BufferedImage newImage = new BufferedImage(bI.getWidth(), bI.getHeight(), BufferedImage.TYPE_INT_RGB);
-                            BufferedImage newImage = fitCanvas(canvas, bI);
-                            newImage.createGraphics().drawImage(bI,
-                                    0,
-                                    0,
-                                    Color.WHITE,
-                                    null);
-
-                            FileOutputStream fOStream = new FileOutputStream(file.getAbsolutePath());
-                            ImageIO.write(newImage,
-                                    fType,
-                                    fOStream);
-                            fOStream.close();
+                        System.out.println("SAVING...");
 
 
-                        } catch (ArrayIndexOutOfBoundsException | IOException e) {
-                            e.printStackTrace();
-                        }
                     }
 
                 }
@@ -224,7 +269,7 @@ public class PainT extends Application {
                             iHandler.getImage().getWidth(),
                             iHandler.getImage().getHeight());
                     iHandler.closeImage();
-                    group.setVisible(false);
+                    group1.setVisible(false);
                 }
         );
 
@@ -258,6 +303,115 @@ public class PainT extends Application {
                     aboutPop();
                 }
         );
+
+
+        /**************************
+         * Button Actions
+         ****************** ***/
+
+        drawFree.setOnAction(
+                bE -> {
+                    dHandler.setDrawType(DrawType.FREE);
+                }
+        );
+
+        drawLine.setOnAction(
+                bE -> {
+                    dHandler.setDrawType(DrawType.LINE);
+                }
+        );
+
+        /**************************
+         * Color Selection
+         ****************** ***/
+
+        vB1.addEventHandler(MouseEvent.MOUSE_CLICKED,
+                e -> {
+
+            Rectangle target = (Rectangle) e.getTarget();
+            dHandler.setCurrentColor((Color) target.getFill());
+            pHandler.setCurrentColor(dHandler.getCurrentColor());
+
+
+
+
+                });
+
+
+
+
+        /**************************
+         * Drawing
+         ****************** ***/
+
+        canvas.addEventHandler(MouseEvent.ANY,
+                e -> {
+                    switch (dHandler.getDrawType()) {
+                        case FREE:
+                            System.out.println("FREE");
+                            if (e.getEventType() == MouseEvent.MOUSE_DRAGGED) {
+                                if (e.isPrimaryButtonDown()) {
+                                    gContent.setFill(dHandler.getCurrentColor());
+                                    gContent.fillRect(e.getX() - 3,
+                                            e.getY() - 3,
+                                            5,
+                                            5);
+                                } else if (e.isSecondaryButtonDown()) {
+
+                                    gContent.clearRect(e.getX() - 3,
+                                            e.getY() - 3,
+                                            5,
+                                            5);
+
+                                }
+                            }
+                            break;
+
+                        case LINE:
+                            System.out.println("LINE");
+                            if (e.getEventType() == MouseEvent.MOUSE_CLICKED) {
+                                if (dHandler.isFirstClick()) {
+                                    dHandler.setPosA(e.getX(),
+                                            e.getY());
+                                    System.out.println(dHandler.isFirstClick());
+                                    dHandler.click();
+                                } else {
+                                    gContent.setLineWidth(5);
+                                    gContent.setStroke(dHandler.getCurrentColor());
+                                    gContent.strokeLine(dHandler.getPosAX(),
+                                            dHandler.getPosAY(),
+                                            e.getX(),
+                                            e.getY());
+                                    dHandler.setPosA(0, 0);
+                                    System.out.println(dHandler.isFirstClick());
+                                    dHandler.click();
+
+
+                                }
+
+
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+
+                });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         /**************************
          * IMAGE
@@ -346,10 +500,9 @@ public class PainT extends Application {
         int newWidth = (i.getWidth() * ratio);
         int newHeight = (i.getHeight() * ratio);
 
-        return Scalr.resize(i,
-                Scalr.Method.BALANCED,
-                newWidth,
-                newHeight);
+        return null;
+
+        //return Scalr.resize(i, Scalr.Method.BALANCED, newWidth, newHeight);
 
         //AffineTransform aT = new AffineTransform();
         //aT.scale(ratio, ratio);
