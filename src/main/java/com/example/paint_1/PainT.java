@@ -1,22 +1,17 @@
 package com.example.paint_1;
 
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
-import javafx.event.EventType;
 import javafx.geometry.Insets;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.*;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCombination;
@@ -28,25 +23,37 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-//import org.imgscalr.Scalr;
 
 import javax.imageio.ImageIO;
-//import java.awt.*;
-//import java.awt.*;
-import java.awt.Desktop;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
+//import org.imgscalr.Scalr;
+//import java.awt.*;
+//import java.awt.*;
 
 
 public class PainT extends Application {
     @SuppressWarnings("ConstantConditions")
     @Override
     public void start(Stage stage) throws IOException {
+        //Create temp file directory if not already there
+        Path workspace = Paths.get("Images");
+        Files.createDirectories(workspace);
+        Path tempDir = Files.createTempDirectory(workspace, "temp");
+
+
+
         stage.setTitle("Paint (t)");
         stage.setMaximized(true);
 
@@ -62,21 +69,29 @@ public class PainT extends Application {
         PaletteHandler pHandler = new PaletteHandler();
 
         /**************************
+         * IMAGES
+         ****************** ***/
+
+        Image currentImage = null;
+
+
+
+        /**************************
          * MENU Bars
          ****************** ***/
 
         /**** Main Menu *******/
         // File menu
         Menu mFile = new Menu("File");
-        MenuItem openI = new MenuItem("Open Image");
-        openI.setAccelerator(KeyCombination.keyCombination("Shortcut+Shift+N"));
+        MenuItem openImage = new MenuItem("Open Image");
+        openImage.setAccelerator(KeyCombination.keyCombination("Shortcut+Shift+N"));
         MenuItem saveI = new MenuItem("Save Image");
         saveI.setAccelerator(KeyCombination.keyCombination("Shortcut+S"));
         MenuItem saveIAs= new MenuItem("Save Image As");
         saveIAs.setAccelerator(KeyCombination.keyCombination("Shortcut+Shift+S"));
         MenuItem closeI = new MenuItem("Close Image");
         MenuItem exit = new MenuItem("Close");
-        mFile.getItems().add(openI);
+        mFile.getItems().add(openImage);
         mFile.getItems().add(saveI);
         mFile.getItems().add(saveIAs);
         mFile.getItems().add(closeI);
@@ -204,18 +219,6 @@ public class PainT extends Application {
 
 
 
-        /**************************
-         * IMAGE View
-         ****************** ***/
-
-        ImageView iView = new ImageView();
-        iView.setVisible(false);
-        iView.setX(5);
-        iView.setY(5);
-        iView.setFitWidth(600);
-        iView.setPreserveRatio(true);
-
-
 
 
 
@@ -235,41 +238,42 @@ public class PainT extends Application {
          ****************** ***/
 
         // OPEN image
-        openI.setOnAction(
+        openImage.setOnAction(
                 aE -> {
 
-                    File file = openImage(stage);
-                    if (file != null){
-                        if (iHandler.getImage() != null) {
-                            gContent.clearRect(0,
-                                    0,
-                                    iHandler.getImage().getWidth(),
-                                    iHandler.getImage().getHeight());
-                        }
-                        try {
-                            iHandler.addImage(file);
-                            Image i = iHandler.getImage();
-                            FileInputStream fIStream = new FileInputStream(iHandler.getOpenImage().getAbsolutePath());
-                            BufferedImage bI = ImageIO.read(fIStream);
-                            fIStream.close();
+                    File openF = openImage(stage);
+                    String openFString = openF.getAbsolutePath();
+                    System.out.println("Opening " + openFString + "...");
 
-                            //BufferedImage newImage = fitCanvas(canvas, bI);
-
-                            //Image iii = SwingFXUtils.toFXImage();
-
-
-                            gContent.drawImage(i,
-                                    0,
-                                    0);
-                            cPane.setVisible(true);
-
-                        } catch (NullPointerException | IOException ex) {
-                            ex.printStackTrace();
-                            iHandler.closeImage();
-                            cPane.setVisible(false);
-                        }
+                    try {
+                        iHandler.addImage(openF);
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                    else System.out.println("File is NULL! -- PainT.java - ln 113");
+
+                    Image openI = null;
+                    try {
+                        openI = new Image(new FileInputStream(openFString));
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                    gContent.clearRect(
+                            0,0,
+                            canvas.getWidth(),
+                            canvas.getHeight());
+
+                    gContent.drawImage(openI,
+                            0,
+                            0);
+
+
+
+
+
+
+
+
+
                 }
         );
 
@@ -296,20 +300,18 @@ public class PainT extends Application {
         // CLOSE image
         closeI.setOnAction(
                 aE -> {
+                    iHandler.closeImage();
                     gContent.clearRect(0,
                             0,
-                            iHandler.getImage().getWidth(),
-                            iHandler.getImage().getHeight());
-                    iHandler.closeImage();
-                    cPane.setVisible(false);
+                            canvas.getWidth(),
+                            canvas.getHeight());
+                    //cPane.setVisible(false);
                 }
         );
 
         // EXIT program
         exit.setOnAction(
-                aE -> {
-                    System.exit(0);
-                }
+                aE -> System.exit(0)
         );
 
         // OPEN release notes
@@ -331,9 +333,7 @@ public class PainT extends Application {
 
         // POPUP about page
         about.setOnAction(
-                aE -> {
-                    aboutPop();
-                }
+                aE -> aboutPop()
         );
 
 
@@ -342,15 +342,11 @@ public class PainT extends Application {
          ****************** ***/
 
         drawFree.setOnAction(
-                bE -> {
-                    dHandler.setDrawType(DrawType.FREE);
-                }
+                bE -> dHandler.setDrawType(DrawType.FREE)
         );
 
         drawLine.setOnAction(
-                bE -> {
-                    dHandler.setDrawType(DrawType.LINE);
-                }
+                bE -> dHandler.setDrawType(DrawType.LINE)
         );
 
         /**************************
@@ -377,9 +373,7 @@ public class PainT extends Application {
         /**** Line Thickness Selection *******/
 
         pMenu.setOnAction(
-                aE ->{
-                    pMenu.setGraphic(pHandler.getMenuLine());
-                }
+                aE -> pMenu.setGraphic(pHandler.getMenuLine())
         );
 
         thinW.setOnAction(
@@ -540,8 +534,6 @@ public class PainT extends Application {
          * IMAGE
          ****************** ***/
 
-        // Image MAP
-        Map iMap = new HashMap();
 
 
 
