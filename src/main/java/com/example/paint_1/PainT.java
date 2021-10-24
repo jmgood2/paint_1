@@ -10,10 +10,10 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
@@ -24,9 +24,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -35,8 +33,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 //import org.imgscalr.Scalr;
 //import java.awt.*;
@@ -72,7 +68,6 @@ public class PainT extends Application {
          * IMAGES
          ****************** ***/
 
-        Image currentImage = null;
 
 
 
@@ -128,6 +123,9 @@ public class PainT extends Application {
 
         bBar.getButtons().addAll(drawFree, drawLine);
 
+        bBar.setPrefHeight(30);
+        BorderPane.setAlignment(bBar, Pos.BOTTOM_CENTER);
+
         /********* Color Palette ***/
 
         VBox vB1 = new VBox(5);
@@ -161,6 +159,14 @@ public class PainT extends Application {
         vB1.getChildren().add(textW);
 
 
+        vB1.setBorder(new Border(new BorderStroke(
+                Color.BLACK,
+                BorderStrokeStyle.SOLID,
+                new CornerRadii(2),
+                new BorderWidths(2)
+        )));
+
+
 
 
 
@@ -178,18 +184,19 @@ public class PainT extends Application {
         /**************************
          *  Canvas Setup
          ****************** ***/
-        Pane cPane = new Pane();
-        bRoot.setCenter(cPane);
+
+
 
         Canvas canvas = new Canvas();
-        cPane.getChildren().add(canvas);
-        cPane.setBorder(new Border(new BorderStroke(Color.BLACK,
-                BorderStrokeStyle.SOLID,
-                CornerRadii.EMPTY,
-                BorderWidths.DEFAULT)));
 
-        canvas.widthProperty().bind(cPane.widthProperty());
-        canvas.heightProperty().bind(cPane.heightProperty());
+        double canvasH = 500;
+        double canvasW = 500;
+
+        canvas.setWidth(canvasW);
+        canvas.setHeight(canvasH);
+
+
+        //canvas.setClip(bRoot.getCenter());
 
         GraphicsContext gContent = canvas.getGraphicsContext2D();
         gContent.setFill(Color.WHITE);
@@ -197,6 +204,40 @@ public class PainT extends Application {
                 0,
                 canvas.getWidth(),
                 canvas.getHeight());
+
+        // ScrollPane containing canvas
+        ScrollPane cPane = new ScrollPane(canvas);
+
+        // Scale Scrolling
+        cPane.getContent().setOnScroll(scrollEvent ->{
+            double y0 = scrollEvent.getDeltaY();
+            double cHeight = cPane.getContent().getBoundsInLocal().getHeight();
+            double sHeight = cPane.getHeight();
+            double y1 = 1;
+            if (cHeight != sHeight) y1 = (cHeight - sHeight);
+            double vVal = cPane.getVvalue();
+            cPane.setVvalue(vVal + -y0/y1);
+
+            double x0 = scrollEvent.getDeltaX();
+            double cWidth = cPane.getContent().getBoundsInLocal().getWidth();
+            double sWidth = cPane.getWidth();
+            double x1 = 1;
+            if (cWidth != cWidth) x1 = (cWidth - sWidth);
+            double hVal = cPane.getHvalue();
+            cPane.setHvalue(hVal + -x0/x1);
+
+        });
+
+
+        cPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+
+        BorderPane.setAlignment(cPane, Pos.TOP_LEFT);
+        BorderPane.setMargin(cPane, new Insets(20,12,12,20));
+
+
+
+
+
 
 
         //Group group1 = new Group(canvas);
@@ -209,12 +250,28 @@ public class PainT extends Application {
          ****************** ***/
 
         HBox hB1 = new HBox(mBar);
+        hB1.setBorder(new Border(new BorderStroke(
+                Color.BLACK,
+                BorderStrokeStyle.SOLID,
+                new CornerRadii(2),
+                new BorderWidths(2)
+        )));
         HBox hB2 = new HBox(bBar);
+        hB2.setAlignment(Pos.BOTTOM_CENTER);
+        hB2.setBorder(new Border(new BorderStroke(
+                Color.BLACK,
+                BorderStrokeStyle.SOLID,
+                new CornerRadii(2),
+                new BorderWidths(2)
+        )));
+        BorderPane.setMargin(hB2, new Insets(20,12,12,20));
         VBox vB2 = new VBox();
         bRoot.setTop(hB1);
-        bRoot.setBottom(hB2);
         bRoot.setLeft(vB1);
         bRoot.setRight(vB2);
+        bRoot.setCenter(cPane);
+        bRoot.setBottom(hB2);
+
 
 
 
@@ -257,6 +314,11 @@ public class PainT extends Application {
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     }
+
+                    canvas.setHeight(openI.getHeight());
+                    canvas.setWidth(openI.getWidth());
+
+
                     gContent.clearRect(
                             0,0,
                             canvas.getWidth(),
