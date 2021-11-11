@@ -1,6 +1,7 @@
 package com.example.paint_1;
 
 import javafx.application.Application;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -14,6 +15,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
@@ -24,7 +26,9 @@ import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -34,10 +38,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
-//import org.imgscalr.Scalr;
-//import java.awt.*;
-//import java.awt.*;
-
 
 public class PainT extends Application {
     @SuppressWarnings("ConstantConditions")
@@ -45,7 +45,8 @@ public class PainT extends Application {
     public void start(Stage stage) throws IOException {
         //Create temp file directory if not already there
         Path workspace = Paths.get("Images");
-        Files.createDirectories(workspace);
+        Path workDir = Files.createDirectories(workspace);
+
         Path tempDir = Files.createTempDirectory(workspace, "temp");
 
 
@@ -168,10 +169,6 @@ public class PainT extends Application {
 
 
 
-
-
-
-
         /**************************
          *  SCENE Setup
          ****************** ***/
@@ -194,9 +191,6 @@ public class PainT extends Application {
 
         canvas.setWidth(canvasW);
         canvas.setHeight(canvasH);
-
-
-        //canvas.setClip(bRoot.getCenter());
 
         GraphicsContext gContent = canvas.getGraphicsContext2D();
         gContent.setFill(Color.WHITE);
@@ -236,15 +230,6 @@ public class PainT extends Application {
 
 
 
-
-
-
-
-        //Group group1 = new Group(canvas);
-        //cPane.setVisible(true);
-
-
-
         /**************************
          *  LAYOUT Setup
          ****************** ***/
@@ -273,13 +258,6 @@ public class PainT extends Application {
         bRoot.setBottom(hB2);
 
 
-
-
-
-
-
-
-
         /**************************
          * SCENE creation and update
          ****************** ***/
@@ -298,7 +276,7 @@ public class PainT extends Application {
         openImage.setOnAction(
                 aE -> {
 
-                    File openF = openImage(stage);
+                    File openF = openImage(stage, new File (workDir.toString()));
                     String openFString = openF.getAbsolutePath();
                     System.out.println("Opening " + openFString + "...");
 
@@ -328,11 +306,7 @@ public class PainT extends Application {
                             0,
                             0);
 
-
-
-
-
-
+                    iHandler.setCurrentImage(openF);
 
 
 
@@ -342,22 +316,48 @@ public class PainT extends Application {
         // SAVE image
         saveI.setOnAction(
                 aE -> {
-                    File file = saveImage(stage);
-                    String fType = file.getName().substring(
-                            file.getName().lastIndexOf('.') + 1);
-                    System.out.println("File extension of " + file.getAbsolutePath() + " is " + fType);
-                    if (file == null){
-                        //saveImageAs(stage);
-                        saveImage(stage);
+                    File iFile = iHandler.getCurrentImage();
+
+                    String fType = iFile.getName().substring(
+                            iFile.getName().lastIndexOf('.') + 1);
+                    System.out.println("File extension of " + iFile.getAbsolutePath() + " is " + fType);
+                    if (iFile == null){
+                        File file = saveImage(stage, new File (workDir.toString()));
+
+                        System.out.println("RUNNING SAVE IMAGE");
+                        saveImageAs(canvas, file);
                     }
                     else {
                         System.out.println("SAVING...");
+                        saveImageAs(canvas, iFile);
 
 
                     }
+                    System.out.println("RUNNING SAVE IMAGE AS");
 
                 }
         );
+
+        // SAVE image AS
+        saveIAs.setOnAction(
+            aE -> {
+
+                File file = saveImage(stage, new File (workDir.toString()));
+                if (file == null) {
+                    try {
+                        Files.createFile(file.toPath());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                System.out.println("RUNNING SAVE IMAGE");
+                saveImageAs(canvas, file);
+                System.out.println("RUNNING SAVE IMAGE AS");
+
+
+
+            });
+
 
         // CLOSE image
         closeI.setOnAction(
@@ -373,7 +373,14 @@ public class PainT extends Application {
 
         // EXIT program
         exit.setOnAction(
-                aE -> System.exit(0)
+                aE -> {
+                    try {
+                        clearTemp(new File(tempDir.toString()));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    System.exit(0);
+                }
         );
 
         // OPEN release notes
@@ -527,7 +534,6 @@ public class PainT extends Application {
                 e -> {
                     switch (dHandler.getDrawType()) {
                         case FREE:
-                            System.out.println("FREE");
                             if (e.getEventType() == MouseEvent.MOUSE_DRAGGED) {
                                 if (e.isPrimaryButtonDown()) {
                                     gContent.setFill(dHandler.getCurrentColor());
@@ -547,7 +553,6 @@ public class PainT extends Application {
                             break;
 
                         case LINE:
-                            System.out.println("LINE");
                             if (e.getEventType() == MouseEvent.MOUSE_CLICKED) {
                                 if (dHandler.isFirstClick()) {
                                     dHandler.setPosA(e.getX(),
@@ -580,18 +585,6 @@ public class PainT extends Application {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
         /**************************
          * IMAGE
          ****************** ***/
@@ -612,9 +605,10 @@ public class PainT extends Application {
      * @param stage
      * @return File
      */
-    public static File openImage(Stage stage){
+    public static File openImage(Stage stage, File initial){
         FileChooser fChooser = new FileChooser();
         fChooser.setTitle("Open Image");
+        fChooser.setInitialDirectory(initial);
         fChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("All Images", "*.*"),
                 new FileChooser.ExtensionFilter("JPG", "*.jpg", "*.jpeg"),
@@ -626,9 +620,10 @@ public class PainT extends Application {
 
     }
 
-    public static File saveImage(Stage stage){
+    public static File saveImage(Stage stage, File initial){
         FileChooser fChooser = new FileChooser();
         fChooser.setTitle("Save Image");
+        fChooser.setInitialDirectory(initial);
         fChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("All Images", "*.*"),
                 new FileChooser.ExtensionFilter("JPG", "*.jpg", "*.jpeg"),
@@ -640,6 +635,46 @@ public class PainT extends Application {
 
     }
 
+    public static void saveImageAs(Canvas canvas, File file){
+
+        try{
+            System.out.println("SYSTEM Save Image As w/ " + file.getAbsolutePath());
+            WritableImage wImage = new WritableImage((int) canvas.getWidth(),
+                    (int) canvas.getHeight());
+            canvas.snapshot(null, wImage);
+
+            RenderedImage rImage = SwingFXUtils.fromFXImage(wImage, null);
+            String ext = file.getPath().substring(file.getPath().lastIndexOf(".") + 1);
+
+            ImageIO.write(rImage,
+                    ext,
+                    file);
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Error LOG
+            System.out.println("ERROR SAVING \n" + e);
+        }
+
+
+    }
+
+
+    /** ClearTemp Method
+     * Deletes the Temp image file and all its contents
+     */
+
+    public void clearTemp(File tempDir) throws IOException {
+        File[] tempFiles = tempDir.listFiles();
+        if (tempFiles != null) {
+            for (File f: tempFiles){
+                if (f.isDirectory()) clearTemp(f);
+                else Files.delete(Paths.get(f.getPath()));
+            }
+        }
+        Files.delete(Paths.get(tempDir.getPath()));
+    }
 
 
 

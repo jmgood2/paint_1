@@ -14,14 +14,18 @@ public class ImageHandler {
     private List<File> openImagesF;
     Path tempDir;
 
+    File currentImage;
+
 
     public ImageHandler(){
+        currentImage = null;
         iMap  = new HashMap<>();
         openImagesF = new ArrayList<>();
         tempDir = FileSystems.getDefault().getPath("/images","/temp");
     }
 
     public ImageHandler(File f) throws IOException {
+        currentImage = null;
         iMap = new HashMap<>();
         openImagesF = new ArrayList<>();
         // Add File and corresponding image to iMap
@@ -32,6 +36,7 @@ public class ImageHandler {
     }
 
     public ImageHandler(Map<File, Image> map){
+        currentImage = null;
         // Sets passed Map as iMap
         iMap = map;
         openImagesF = new ArrayList<>();
@@ -39,6 +44,7 @@ public class ImageHandler {
     }
 
     public ImageHandler(Map<File, Image> map, List<File> l){
+        currentImage = null;
         // Sets passed Map as iMap
         iMap = map;
         // Retain opened
@@ -78,8 +84,6 @@ public class ImageHandler {
 
         openImagesF.add(0, f);
 
-
-
     }
 
     public Image getImage(File f){
@@ -95,12 +99,21 @@ public class ImageHandler {
         }
     }
 
+    public File getCurrentImage(){
+        return currentImage;
+    }
+
+    public void setCurrentImage(File i){
+        currentImage = i;
+    }
+
     public List<File> getOpenImages(){
         return openImagesF;
     }
 
 
     public void closeImage(){
+        currentImage = null;
         iMap.remove(openImagesF.get(0));
         openImagesF.remove(0);
 
