@@ -267,6 +267,19 @@ public class PainT extends Application {
         stage.show();
 
 
+        /**************************
+         * Exiting Program Event
+         ****************** ***/
+        //When [X] close button is selected
+        stage.setOnCloseRequest(wE -> {
+            // Delete the Temp File directory (as with the Exit menu button)
+            try {
+                clearTemp(new File(tempDir.toString()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        });
 
         /**************************
          * Menu Item Actions
