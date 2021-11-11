@@ -28,7 +28,7 @@ import javafx.stage.Stage;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.RenderedImage;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -37,6 +37,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+
+import static javafx.scene.paint.Color.WHITE;
 
 
 public class PainT extends Application {
@@ -95,9 +97,8 @@ public class PainT extends Application {
 
         //Edit menu
         Menu mEdit = new Menu("Edit");
-        MenuItem placeholder = new MenuItem("Coming Soon");
-        placeholder.setDisable(true);
-        mEdit.getItems().add(placeholder);
+        MenuItem undo = new MenuItem("Undo");
+        mEdit.getItems().add(undo);
 
         // Help menu
         Menu mHelp = new Menu("Help");
@@ -138,7 +139,7 @@ public class PainT extends Application {
         vB1.getChildren().add(pHandler.getCurrentColorRect());
 
 
-        /********* Line Width Selection ***/
+        /****** Line Width Selection ***/
         Menu pMenu = new Menu("",
                 pHandler.getMenuLine());
         MenuItem thinW = new MenuItem("Thin",
@@ -154,7 +155,7 @@ public class PainT extends Application {
         MenuBar pBar = new MenuBar(pMenu);
         vB1.getChildren().add(pBar);
 
-        TextField textW = new TextField(Double.toString(dHandler.getLineWidth()));
+        TextField textW = new TextField(Double.toString(dHandler.getWidth()));
         textW.setMinWidth(20);
         textW.setMaxWidth(40);
         vB1.getChildren().add(textW);
@@ -168,10 +169,9 @@ public class PainT extends Application {
         )));
 
 
-
-        /**************************
-         *  SCENE Setup
-         ****************** ***/
+        /*************************
+         SCENE Setup
+         ***/
         BorderPane bRoot = new BorderPane();
         Scene baseScene = new Scene(bRoot,
                 Screen.getPrimary().getVisualBounds().getWidth(),
@@ -193,11 +193,20 @@ public class PainT extends Application {
         canvas.setHeight(canvasH);
 
         GraphicsContext gContent = canvas.getGraphicsContext2D();
-        gContent.setFill(Color.WHITE);
+        gContent.setFill(WHITE);
         gContent.fillRect(0,
                 0,
                 canvas.getWidth(),
                 canvas.getHeight());
+
+        // Save initial Blank Images to Temp Directory
+
+        File tempImage = new File(String.valueOf(Files.createTempFile(
+                tempDir,
+                null,
+                ".jpg")));
+
+        newTempFiles(canvas, tempDir, tempImage, iHandler);
 
         // ScrollPane containing canvas
         ScrollPane cPane = new ScrollPane(canvas);
@@ -274,7 +283,7 @@ public class PainT extends Application {
         stage.setOnCloseRequest(wE -> {
             // Delete the Temp File directory (as with the Exit menu button)
             try {
-                clearTemp(new File(tempDir.toString()));
+                clearTemp(new File(tempDir.toString()), iHandler);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -321,6 +330,23 @@ public class PainT extends Application {
 
                     iHandler.setCurrentImage(openF);
 
+                    String ext = openF.getPath().substring(openF.getPath().lastIndexOf("."));
+
+                    File tempF = null;
+                    try {
+                        tempF = new File(String.valueOf(Files.createTempFile(
+                                tempDir,
+                                null,
+                                ext)));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    try {
+                        newTempFiles(canvas, tempDir, tempF, iHandler);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
 
 
                 }
@@ -381,6 +407,13 @@ public class PainT extends Application {
                             canvas.getWidth(),
                             canvas.getHeight());
                     //cPane.setVisible(false);
+
+                    try {
+                        clearTempFiles(tempDir);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
                 }
         );
 
@@ -388,11 +421,56 @@ public class PainT extends Application {
         exit.setOnAction(
                 aE -> {
                     try {
-                        clearTemp(new File(tempDir.toString()));
+                        clearTemp(new File(tempDir.toString()), iHandler);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                     System.exit(0);
+                }
+        );
+
+        //Undo action - Currently permanent
+        undo.setOnAction(
+                aE -> {
+                    // Make sure we don't accidentally erase the original temp image
+                    if (iHandler.getLatestTempImage() != iHandler.getOriginalImage()) {
+                        try {
+                            Files.delete(iHandler.getLatestTempImage().toPath());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        iHandler.backTempImage();
+                        iHandler.setCurrentImage(iHandler.getLatestTempImage());
+
+
+                        Image openI = null;
+                        try {
+                            openI = iHandler.getImage(iHandler.getLatestTempImage());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        // Set canvas to old values
+                        canvas.setHeight(openI.getHeight());
+                        canvas.setWidth(openI.getWidth());
+
+                        gContent.clearRect(
+                                0, 0,
+                                canvas.getWidth(),
+                                canvas.getHeight());
+
+                        gContent.drawImage(openI,
+                                0,
+                                0);
+
+                    }
+                    else {
+                        System.out.println("Cannot erase initial temp Image");
+                    }
+
+
+
+
                 }
         );
 
@@ -460,9 +538,9 @@ public class PainT extends Application {
 
         thinW.setOnAction(
                 aE -> {
-                    dHandler.setLineWidth(pHandler.thin);
+                    dHandler.setWidth(pHandler.thin);
                     pHandler.setCurrentLine(1);
-                    textW.setText(Double.toString(dHandler.lineWidth));
+                    textW.setText(Double.toString(dHandler.width));
                     Line mLine = new Line(0,
                             10,
                             20,
@@ -474,9 +552,9 @@ public class PainT extends Application {
         );
         defW.setOnAction(
                 aE -> {
-                    dHandler.setLineWidth(pHandler.def);
+                    dHandler.setWidth(pHandler.def);
                     pHandler.setCurrentLine(5);
-                    textW.setText(Double.toString(dHandler.lineWidth));
+                    textW.setText(Double.toString(dHandler.width));
                     Line mLine = new Line(0,
                             10,
                             20,
@@ -488,9 +566,9 @@ public class PainT extends Application {
         );
         thickW.setOnAction(
                 aE -> {
-                    dHandler.setLineWidth(pHandler.thick);
+                    dHandler.setWidth(pHandler.thick);
                     pHandler.setCurrentLine(10);
-                    textW.setText(Double.toString(dHandler.lineWidth));
+                    textW.setText(Double.toString(dHandler.width));
                     Line mLine = new Line(0,
                             10,
                             20,
@@ -532,7 +610,7 @@ public class PainT extends Application {
 
                     }
                     textW.setText(String.valueOf(c));
-                    dHandler.setLineWidth(Double.parseDouble(textW.getText()));
+                    dHandler.setWidth(Double.parseDouble(textW.getText()));
 
                 }
         );
@@ -550,17 +628,25 @@ public class PainT extends Application {
                             if (e.getEventType() == MouseEvent.MOUSE_DRAGGED) {
                                 if (e.isPrimaryButtonDown()) {
                                     gContent.setFill(dHandler.getCurrentColor());
-                                    gContent.fillRect(e.getX() - 3,
-                                            e.getY() - 3,
-                                            5,
-                                            5);
+                                    gContent.fillRect(e.getX() - dHandler.getWidth(),
+                                            e.getY() - dHandler.getWidth(),
+                                            dHandler.getWidth(),
+                                            dHandler.getWidth());
                                 } else if (e.isSecondaryButtonDown()) {
 
-                                    gContent.clearRect(e.getX() - 3,
-                                            e.getY() - 3,
-                                            5,
-                                            5);
+                                    gContent.clearRect(e.getX() - dHandler.getWidth(),
+                                            e.getY() - dHandler.getWidth(),
+                                            dHandler.getWidth(),
+                                            dHandler.getWidth());
 
+                                }
+                            }
+
+                            if (e.getEventType() == MouseEvent.MOUSE_RELEASED){
+                                try {
+                                    pushTempFile(canvas, tempDir, iHandler);
+                                } catch (IOException ex) {
+                                    ex.printStackTrace();
                                 }
                             }
                             break;
@@ -573,7 +659,7 @@ public class PainT extends Application {
                                     System.out.println(dHandler.isFirstClick());
                                     dHandler.click();
                                 } else {
-                                    gContent.setLineWidth(dHandler.getLineWidth());
+                                    gContent.setLineWidth(dHandler.getWidth());
                                     gContent.setStroke(dHandler.getCurrentColor());
                                     gContent.strokeLine(dHandler.getPosAX(),
                                             dHandler.getPosAY(),
@@ -582,6 +668,11 @@ public class PainT extends Application {
                                     dHandler.setPosA(0, 0);
                                     System.out.println(dHandler.isFirstClick());
                                     dHandler.click();
+                                    try {
+                                        pushTempFile(canvas, tempDir, iHandler);
+                                    } catch (IOException ex) {
+                                        ex.printStackTrace();
+                                    }
 
 
                                 }
@@ -615,7 +706,6 @@ public class PainT extends Application {
     /** openImage method
      * Launches a FileChooser explorer for locating an image
      * Images filtered by type
-     * @param stage
      * @return File
      */
     public static File openImage(Stage stage, File initial){
@@ -656,18 +746,35 @@ public class PainT extends Application {
                     (int) canvas.getHeight());
             canvas.snapshot(null, wImage);
 
-            RenderedImage rImage = SwingFXUtils.fromFXImage(wImage, null);
+            BufferedImage bImage = SwingFXUtils.fromFXImage(wImage, null);
             String ext = file.getPath().substring(file.getPath().lastIndexOf(".") + 1);
 
-            ImageIO.write(rImage,
-                    ext,
-                    file);
+            BufferedImage bImage2 = bImage;
+
+            //Handling for Jpegs
+            if (ext.equals("jpg") ||  ext.equals("jpeg")) {
+                bImage2 = new BufferedImage(
+                        bImage.getWidth(),
+                        bImage.getHeight(),
+                        BufferedImage.OPAQUE);
+            }
+            Graphics2D graphics = bImage2.createGraphics();
+
+            graphics.drawImage(bImage, 0, 0, null);
+
+            ImageIO.write(bImage2, ext, file);
+
+            graphics.dispose();
 
 
         } catch (IOException e) {
             e.printStackTrace();
             // Error LOG
-            System.out.println("ERROR SAVING \n" + e);
+            System.out.println("ERROR SAVING IOEXCEPTION\n" + e);
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+            // Error LOG
+            System.out.println("ERROR SAVING (NULLPOINTER \n" + e);
         }
 
 
@@ -678,7 +785,8 @@ public class PainT extends Application {
      * Deletes the Temp image file and all its contents
      */
 
-    public void clearTemp(File tempDir) throws IOException {
+    public void clearTemp(File tempDir, ImageHandler iH) throws IOException {
+        iH.clearTempList();
         File[] tempFiles = tempDir.listFiles();
         if (tempFiles != null) {
             for (File f: tempFiles){
@@ -688,6 +796,41 @@ public class PainT extends Application {
         }
         Files.delete(Paths.get(tempDir.getPath()));
     }
+
+    public void clearTemp(File tempDir) throws IOException {
+
+        Files.delete(Paths.get(tempDir.getPath()));
+    }
+
+    public void newTempFiles(Canvas c, Path d, File f, ImageHandler iH) throws IOException {
+        clearTempFiles(d);
+        System.out.println(f.getAbsolutePath());
+        iH.newTempList(f);
+        saveImageAs(c, iH.getOriginalImage());
+    }
+
+    public void pushTempFile(Canvas c, Path d, ImageHandler iH) throws IOException {
+        File f = new File(String.valueOf(Files.createTempFile(
+                d,
+                null,
+                iH.getOriginalImage().getPath().substring(
+                        iH.getOriginalImage().getPath().lastIndexOf(".")
+                ))));
+        iH.addTempImage(f);
+        saveImageAs(c, f);
+    }
+
+    public void clearTempFiles(Path d) throws IOException {
+        File tempDir = new File(d.toString());
+        File[] tempFiles = tempDir.listFiles();
+        if (tempFiles != null) {
+            for (File f: tempFiles){
+                if (f.isDirectory()) clearTempFiles(f.toPath());
+                else Files.delete(Paths.get(f.getPath()));
+            }
+        }
+    }
+
 
 
 
@@ -719,7 +862,6 @@ public class PainT extends Application {
 
     /** main method
      * launches Pain(T)
-     * @param args
      */
     public static void main(String[] args) {
         launch();

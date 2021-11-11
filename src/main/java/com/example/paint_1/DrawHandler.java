@@ -18,7 +18,7 @@ public class DrawHandler {
 
     Color color = Color.BROWN;
 
-    double lineWidth;
+    double width;
 
 
 
@@ -28,7 +28,7 @@ public class DrawHandler {
         posA = new Point2D(0,0);
         firstClick = true;
 
-        lineWidth = 20;
+        width = 20;
     }
 
     public void click(){
@@ -39,7 +39,7 @@ public class DrawHandler {
         return firstClick;
     }
 
-    public double getLineWidth(){ return lineWidth; }
+    public double getWidth(){ return width; }
 
     public Color getCurrentColor(){
         return color;
@@ -61,7 +61,7 @@ public class DrawHandler {
         return posA.getY();
     }
 
-    public void setLineWidth(double c) { lineWidth = c; }
+    public void setWidth(double c) { width = c; }
 
     public void setCurrentColor(Color c){
         color = c;

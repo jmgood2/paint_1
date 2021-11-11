@@ -3,6 +3,7 @@ package com.example.paint_1;
 import javafx.scene.image.Image;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.*;
@@ -12,7 +13,10 @@ public class ImageHandler {
     private Map<File, Image> iMap;
     //List of currently open Images
     private List<File> openImagesF;
+    // Store directory for Temp Image files
     Path tempDir;
+    // List of temporary Images - Saves (temporarily) a new image whenever a change to the image is made
+    private List<File> tempImages = new ArrayList<>();
 
     File currentImage;
 
@@ -86,15 +90,16 @@ public class ImageHandler {
 
     }
 
-    public Image getImage(File f){
+    public Image getImage(File f) throws IOException {
         // Get image from Image Map
         if (iMap.containsKey(f)) {
             if (!openImagesF.contains(f)) openImagesF.add(0, f);
             return iMap.get(f);
         }
         else {
-            System.out.println("Image at \"" + f.getAbsolutePath() + "\" is not in Map!");
-            return null;
+            System.out.println("Image at \"" + f.getAbsolutePath() + "\" is not in Map!\nAdding to map.");
+            addImage(f);
+            return iMap.get(f);
 
         }
     }
@@ -118,6 +123,57 @@ public class ImageHandler {
         openImagesF.remove(0);
 
     }
+
+    // Create new list of Temp Images based on File f (this is the saved original)
+    public void newTempList(File f){
+        try {
+            //System.out.println("clearing list");
+            System.out.println("Empty List? " + tempImages.isEmpty());
+            //tempImages.clear();
+            System.out.println("adding " + f.getAbsolutePath() + " to list");
+            tempImages.add(0, f);
+            System.out.println("done");
+        }
+        catch (NullPointerException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void addTempImage(File f){
+        tempImages.add(f);
+    }
+
+    public void backTempImage(){
+        if (tempImages.size() > 1) {
+            tempImages.remove(tempImages.size() -1);
+        }
+        else System.out.println("Unable to remove Temp Image from List");
+    }
+
+    public void clearTempList(){
+        tempImages.clear();
+    }
+
+    public List<File> getTempList(){
+        return tempImages;
+    }
+
+    public File getLatestTempImage(){
+        return tempImages.get(tempImages.size() -1);
+    }
+
+    public File getOriginalImage(){
+
+        try {
+            return tempImages.get(0);
+        }
+        catch (NullPointerException e){
+            e.printStackTrace();
+        }
+        System.out.println("UNABLE TO GET LIST(0)");
+        return null;
+    }
+
 
 
 }
